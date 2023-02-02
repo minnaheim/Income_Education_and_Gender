@@ -1,0 +1,328 @@
+---
+title: "Income Education and Gender Analysis"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+
+## Original dataset
+
+```{r}
+df_raw <- read.csv("ACS.csv", row.names = NULL, sep = ";")
+head(df_raw) 
+
+```
+
+
+## Importing and Inspecting the Data
+
+```{r}
+
+# because the last four columns do not contain any information, and the ID numbers of the people are irrelevant to us, I will delete these 5 columns
+df <- df_raw %>% select(-X, -X.1, -X.2, -X.3, -CBSERIAL)
+
+# view(df)
+head(df)
+```
+
+Now that the dataset is tidy, we can start with the analysis:
+
+## Analysing the Data with Arithmetics
+
+First, we look at the basic metrics, like the median, mode and range, etc. 
+
+```{r}
+
+mean_general <- mean(df$INCWAGE)
+print(mean_general)
+
+median_general <- median(df$INCWAGE)
+print(median_general)
+
+
+# Since there is no mode function, we have to create one ourselves:
+
+df_INCWAGE <- df[['INCWAGE']]
+
+
+mode <- function(column_name) {
+   unique_n <- unique(column_name)
+   unique_n[which.max(tabulate(match(column_name, unique_n)))]
+}
+
+mode(df_INCWAGE)
+
+# As we can see down below, the most frquent Income overall is O. But lets look at the mode of the Income without 0, as this doesn't tell us much.
+
+df_INCWAGE_new <- df %>% filter(INCWAGE >= 1 )
+  
+df_INCWAGE_new <- df_INCWAGE_new[['INCWAGE']] 
+
+mode(df_INCWAGE_new)
+# As we can see, other than 0, the second most frequent Income is 40 000.
+
+```
+
+## Counting the Variable Types
+
+```{r}
+count_women <- sum(df$SEX == "1")
+  
+print(count_women)  
+```
+
+
+```{r}
+count_men <- sum(df$SEX == "2")
+  
+print(count_men)  
+```
+
+
+```{r}
+count_women_college <- sum(df$SEX == "1" & df$COLLEGE == "1")
+  
+print(count_women_college)  
+```
+
+```{r}
+count_men_college <- sum(df$SEX == "2" & df$COLLEGE == "1")
+  
+print(count_men_college)  
+```
+
+
+```{r}
+count_men_no_college <- sum(df$SEX == "2" & df$COLLEGE == "0")
+  
+print(count_men_no_college)  
+```
+
+```{r}
+count_women_no_college <- sum(df$SEX == "1" & df$COLLEGE == "0")
+  
+print(count_women_no_college)  
+```
+
+I found it important to count and print the numbers of people in the different categories, to show that we do not have the same sample size of each type of variable. This also means that the validity of the analysis might decrease.
+
+## Plotting those Variables in a Barchart
+
+```{r}
+
+df_count <- data.frame(
+  labels = c("women", "men", "women_college", "men_college", "men_no_college", "women_no_college"),
+  values = c(count_women, count_men, count_women_college, count_men_college, count_men_no_college, count_women_no_college)
+)
+
+# head(df_test)
+
+count_plot <- ggplot(df_count, aes(x = labels, y = values)) + geom_bar(stat = "identity", fill = "green") + labs(title = "Count of the different Gender and Education Combinations",  y = "Number of Appearances", x = "Gender and Education Combinations")
+                                        
+count_plot                                        
+
+
+```
+
+
+## Finding the Mean of different Variable Types 
+
+We will try to gauge the mean of the following groups: college graduates, non-college graduates, women, men - college grad (women), non-college grad women, etc.
+This way we can compare the different biometric groups. We will use the mean only, because it suits this type of comparative analysis best, in my opinion. The mean is affected by the different weighting of the data and provides a good overview of the data, unlike the median and mode, which focuses on the middle-most data and the most repetitive piece of data. 
+
+
+```{r}
+
+df_college <- df %>% filter(COLLEGE == 1)
+mean_college <- mean(df_college$INCWAGE)
+
+```
+
+
+
+```{r}
+
+df_no_college <- df %>% filter(COLLEGE == 0)
+mean_no_college <- mean(df_no_college$INCWAGE)
+
+```
+
+
+```{r}
+
+# Since the SEX column is a bit cryptic, we will assume that women = 1 and men = 2.
+
+df_women <- df %>% filter(SEX == 1)
+
+mean_women <- mean(df_women$INCWAGE)
+
+head(df_women)
+
+
+```
+
+
+```{r}
+
+df_men <- df %>% filter(SEX == 2)
+mean_men <- mean(df_men$INCWAGE)
+head(df_men)
+
+```
+
+
+```{r}
+
+# average income of WOMEN with a college degree
+df_women_college <- df %>% filter((SEX) == 1) %>% filter(COLLEGE == 1)
+
+mean_college_women <- mean(df_women_college$INCWAGE)
+
+
+
+# average income of WOMEN without a college degree
+
+df_women_no_college <- df_women %>% filter(COLLEGE == 0)
+mean_women_no_college <- mean(df_women_no_college$INCWAGE)
+
+```
+
+
+
+
+```{r}
+# average income of MEN with a college degree
+df_men_college <- df %>% filter((SEX) == 2) %>% filter(COLLEGE == 1)
+
+mean_men_college <- mean(df_men_college$INCWAGE)
+
+# Lets look at the average income of men without college degrees:
+
+df_men_no_college <- df_men %>% filter(COLLEGE == 0)
+mean_men_no_college <- mean(df_men_no_college$INCWAGE)
+
+
+```
+
+Looking at the Result: It is interesting to see, that although the difference in mean between college and no college degree is approximately 3500 monetary units. When looking at the gender specific differences in mean of college/no college degrees, however, the difference in average income between women with/without college degree is 4800 monetary units, whereas for men, it is only approx. 3000 monetary units. 
+
+It is interesting to spot this gender discrepancy: this comparison of averages shows that women who get college degrees, get a  1.6 times higher pay increase than their male counterparts. 
+
+
+## Plotting the Means
+
+```{r}
+
+df_mean <- data.frame(
+  labels = c("women", "men", "women_college", "men_college", "men_no_college", "women_no_college"),
+  values = c(mean_women, mean_men, mean_college_women, mean_men_college, mean_men_no_college, mean_women_no_college)
+)
+
+# head(df_mean)
+
+mean_plot <- ggplot(df_mean, aes(x = labels, y = values)) + geom_bar(stat = "identity", fill = "blue") + labs(title = "Mean Value of the different Gender and Education Combinations" ,  y = "Average Income", x = "Gender and Education Combinations")
+
+mean_plot
+
+```   
+
+## Analysing the Data through Regressions
+
+Then we will regress the information, based on mutlivariate linear regressions. This way, we can look at the correlations of different variables. 
+
+```{r}
+
+mlr_model <- lm(INCWAGE ~ SEX + COLLEGE, data = df)
+summary(mlr_model)
+
+```
+
+We can see from this MLR, that when keeping the college variable constant, increasing the SEX by one unit, will on average decrease the income by 23434 units. This means, that on average, men (SEX = 2) earn less than women. 
+Also, when keeping SEX constant, increasing the college variable by one unit (i.e. graduating from college) increases income on average by 38152 units. 
+
+
+Still, it is important to remark, that although both of these variables seem statistically significant, the R-squared of the MLR shows us that these two variables are most likely not the only variables needed to explain the change in income. Only 10.56% of the variation in income is explained by the two variables SEX and COLLEGE. We confirm this below:
+
+
+```{r}
+summary(mlr_model)$r.squared
+```
+
+
+## Plotting the Data
+
+Since we have gender split into two groups, we want to plot the data, with 2 different "groups" in one ggplot. 
+
+
+```{r}
+
+df_scatter <- df_women %>% mutate(Type = "Women") %>% bind_rows(df_men %>% mutate(Type = "Men"))
+
+plot_scatter <- df_scatter %>% ggplot(aes(COLLEGE, INCWAGE, color = Type)) + geom_point(position = "jitter") + labs(title = "The Relationship of Income and Education", subtitle = "No College Degree =  0, College Degree = 1 on the x-axis ", x = "Education", y = "Income")
+
+plot_scatter
+
+```
+
+```{r}
+
+df_scatter_2 <- df_college %>% mutate(Type = "College Graduates") %>% bind_rows(df_no_college %>% mutate(Type = "Non College Graduates"))
+
+plot_scatter_2 <- df_scatter_2 %>% ggplot(aes(SEX, INCWAGE, color = Type)) + geom_point(position = "jitter") + labs(title = "The Relationship of Income and Gender", subtitle = "Women = 1 and Men = 2 on the x-axis", x = "Gender", y = "Income")
+
+plot_scatter_2
+
+```
+
+
+
+```{r}
+df_bar <- df_women %>% mutate(Type = "Women") %>% bind_rows(df_men %>% mutate(Type = "Men"))
+
+plot_bar <- df_bar %>% ggplot(aes(COLLEGE, INCWAGE, color = Type)) + geom_col() + labs(title = "The Relationship of Income and Education", subtitle = "No College Degree =  0, College Degree = 1 on the x-axis ", x = "Education", y = "Income")
+
+plot_bar
+```
+
+
+
+
+
+```{r}
+
+df_bar_2 <- df_college %>% mutate(Type = "College Graduates") %>% bind_rows(df_no_college %>% mutate(Type = "Non College Graduates")) 
+
+plot_bar_2 <- df_bar_2 %>% ggplot(aes(SEX, INCWAGE, color = Type)) + geom_col() + labs(title = "The Relationship of Income and Gender", subtitle = "No College Degree =  0, College Degree = 1 on the x-axis ", x = "Gender", y = "Income")
+
+plot_bar_2
+
+
+```
+
+
+Now, we will plot a graph with multiple types of categories, i.e. a
+
+```{r}
+
+df_mega <- df_women_no_college %>% mutate(Type = "Non College Women") %>% bind_rows(df_women_college %>% mutate(Type = "College Graduates Women") , df_men_no_college %>% mutate(Type = "Non College Graduates Men"), df_men_college %>% mutate(Type = "College Graduates Men "))
+  
+# head(df_mega)
+  
+mega_plot <-  df_mega %>% ggplot(aes(COLLEGE, INCWAGE, color = Type)) + geom_bar(stat = "identity") + labs(title = "The Relationship of Education and Income", subtitle = "No College Degree =  0, College Degree = 1 on the x-axis ", x = "Education", y = "Income")
+
+mega_plot
+
+```
+
+
+The Result: These graphs are repetitive. The only reason to visualize this type of relationship 5 times, although representing only one pair of graphs (scatterplot, bar charts) would be enough, is to show off the different possibilities of graphing. 
+
+We can see through these graphs, that on average, women earn more than men. Also, people with college degrees on average earn more than non-college graduates. More specifically, the women that tend to have a college degree earn more on average than the men with college degrees. 
